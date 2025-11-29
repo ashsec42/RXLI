@@ -2,7 +2,7 @@ name: m3u8-watcher
 
 on:
   schedule:
-    - cron: '*/15 * * * *'   # every 15 minutes
+    - cron: '*/15 * * * *'
   workflow_dispatch: {}
 
 jobs:
@@ -19,17 +19,20 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install deps
+      - name: Install deps (including playwright browsers)
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          # install browsers required by playwright
+          python -m playwright install --with-deps
 
-      - name: Run checker
+      - name: Run checker (playwright mode)
         id: run-checker
         env:
           TARGET_PAGE: https://rdxgoa.com/live-tv/
           KNOWN_CDN_BASE: https://g5nl6xoalpq6-hls-live.5centscdn.com/rdxgoa/
           STREAM_NAME: rdxgoa
+          MODE: playwright
         run: |
           python checker.py || true
 
@@ -47,6 +50,7 @@ jobs:
         if: steps.read-url.outputs.playlist != ''
         env:
           PLAYLIST_URL: ${{ steps.read-url.outputs.playlist }}
+          STREAM_NAME: rdxgoa
         run: |
           printf 'PLAYLIST_URL=%s\n' "$PLAYLIST_URL"
           python dvr_to_live.py
