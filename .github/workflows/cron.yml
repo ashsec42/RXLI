@@ -27,14 +27,38 @@ jobs:
       - name: Run checker
         id: run-checker
         env:
-          TARGET_PAGE: https://rdxgoa.com/
+          TARGET_PAGE: https://rdxgoa.com/live-tv/
           KNOWN_CDN_BASE: https://g5nl6xoalpq6-hls-live.5centscdn.com/rdxgoa/
           STREAM_NAME: rdxgoa
         run: |
           python checker.py || true
 
-      - name: Build live .m3u
-        id: make-live
+      - name: Read last_url.txt into output (safe)
+        id: read-url
         run: |
           if [ -f last_url.txt ]; then
-            # read the URL, strip CR/LF, and
+            PLAYLIST_URL=$(tr -d '\r\n' < last_url.txt | sed -e 's/^"//' -e 's/"$//')
+            echo "playlist=${PLAYLIST_URL}" >> "$GITHUB_OUTPUT"
+          else
+            echo "playlist=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build live .m3u (runs only if playlist found)
+        if: steps.read-url.outputs.playlist != ''
+        env:
+          PLAYLIST_URL: ${{ steps.read-url.outputs.playlist }}
+        run: |
+          printf 'PLAYLIST_URL=%s\n' "$PLAYLIST_URL"
+          python dvr_to_live.py
+
+      - name: Commit streams if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add streams || true
+          if git diff --staged --quiet; then
+            echo "no changes to commit"
+          else
+            git commit -m "Update discovered .m3u files" || true
+            git push origin HEAD || echo "push failed"
+          fi
