@@ -40,22 +40,4 @@ jobs:
         run: |
           if [ -f last_url.txt ]; then
             PLAYLIST_URL=$(tr -d '\n' < last_url.txt)
-            echo "PLAYLIST_URL=${PLAYLIST_URL}"
-            export PLAYLIST_URL
-            python dvr_to_live.py
-          else
-            echo "last_url.txt not found — skipping dvr_to_live step"
-          fi
-
-      - name: Commit streams if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add streams || true
-          # if there are staged changes, commit and push
-          if git diff --staged --quiet; then
-            echo "no changes to commit"
-          else
-            git commit -m "Update discovered .m3u files" || true
-            git push origin HEAD || echo "push failed"
-          fi
+            echo "PLA
